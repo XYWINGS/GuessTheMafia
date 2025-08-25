@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import type { Metadata } from "next";
+import { store } from "./store/store";
+import { Provider } from "react-redux";
+import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +32,11 @@ export default function RootLayout({
         <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
-      <body className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen">{children}</body>
+      <Provider store={store}>
+        {" "}
+        <body className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen">{children}</body>
+      </Provider>
+
       {/* <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body> */}
     </html>
   );
