@@ -1,21 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios, { HttpStatusCode } from "axios";
+import { BASE_URL, RoomState } from "../configs/configs";
+import { getErrorMessage } from "../configs/utils";
+import { enqueueSnackbar } from "notistack";
 
-interface Player {
-  _id: string;
-  name: string;
-  role: string;
-  alive: boolean;
-}
-
-interface RoomState {
-  code: string | null;
-  phase: "lobby" | "day" | "night" | "ended";
-  players: Player[];
-  status: "idle" | "loading" | "failed";
-  inspectorResult?: string | null;
-}
-
-const initialState: RoomState = {
+export const initialState: RoomState = {
   code: null,
   phase: "lobby",
   players: [],
@@ -59,6 +48,25 @@ export const endPhase = createAsyncThunk("room/endPhase", async (code: string) =
   return await res.json();
 });
 
+export const createNewRoom = createAsyncThunk("room/create", async (userName: string, { rejectWithValue }) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/api/rooms/create`, {
+      params: { userName: userName },
+    });
+
+    if (response.status === HttpStatusCode.Ok || response.status === HttpStatusCode.Created) {
+      return response.data;
+    } else {
+      throw new Error(response.data?.error?.message || "Unexpected error occurred when creating a room.");
+    }
+  } catch (error) {
+    const errorMessage = getErrorMessage(error, "Failed to create a room.");
+    enqueueSnackbar(errorMessage, { variant: "error" });
+
+    return rejectWithValue(errorMessage);
+  }
+});
+
 export const roomSlice = createSlice({
   name: "room",
   initialState,
@@ -69,6 +77,11 @@ export const roomSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      //Create room
+      .addCase(createNewRoom.fulfilled, (state, action) => {
+        // state.players = action.payload.players;
+        state.status = action.payload.status;
+      })
       // Fetch room
       .addCase(fetchRoom.fulfilled, (state, action) => {
         state.players = action.payload.players;
