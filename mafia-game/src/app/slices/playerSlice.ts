@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 interface PlayerState {
   id: string | null;
   name: string | null;
-  role: string | null; // villager, demon, demonLeader, inspector, doctor
+  role: string | null;
   alive: boolean;
 }
 

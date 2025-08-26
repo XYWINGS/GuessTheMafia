@@ -1,13 +1,10 @@
-'use client';
+"use client";
 import React, { useState } from "react";
 
 const HomePage = () => {
   const [roomCode, setRoomCode] = useState("");
-  const [username, setUsername] = useState("");
-  const onNavigate = (page: string) => {
-    // Placeholder for navigation logic
-    console.log(`Navigating to ${page} with username: ${username} and roomCode: ${roomCode}`);
-  };
+  const [username, setUsername] = useState("kanna");
+  const createGameRoom = () => {};
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -33,7 +30,7 @@ const HomePage = () => {
 
         <div className="space-y-3">
           <button
-            onClick={() => onNavigate("lobby")}
+            onClick={() => createGameRoom()}
             disabled={!username.trim()}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-500 disabled:to-gray-600 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
           >
@@ -50,7 +47,7 @@ const HomePage = () => {
               maxLength={6}
             />
             <button
-              onClick={() => onNavigate("lobby")}
+              // onClick={() => onNavigate("lobby")}
               disabled={!username.trim() || !roomCode.trim()}
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-500 disabled:to-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
             >
