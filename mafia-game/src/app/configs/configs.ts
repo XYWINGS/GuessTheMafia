@@ -12,21 +12,21 @@ export type PlayerRole = "villager" | "demon" | "demonLeader" | "inspector" | "d
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 
 export interface Player {
-  _id: string;
+  id: string;
   name: string;
   isHost: boolean;
   role: PlayerRole;
-  alive: boolean;
+  isAlive: boolean;
   killedBy: KilledBy;
   votes: number;
 }
 
-export type Phase = "day" | "demons" | "doctor" | "inspector" | "waiting";
+export type GameState = "day" | "demons" | "doctor" | "inspector" | "lobby";
 
 export interface Room {
   code: string;
   host: string;
   players: Player[];
   numOfPlayers: number;
-  phase: Phase;
+  gameState: GameState;
 }
