@@ -1,8 +1,8 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios, { HttpStatusCode } from "axios";
-import { BASE_URL, RoomState } from "../configs/configs";
-import { getErrorMessage } from "../configs/utils";
 import { enqueueSnackbar } from "notistack";
+import axios, { HttpStatusCode } from "axios";
+import { getErrorMessage } from "../configs/utils";
+import { BASE_URL, RoomState } from "../configs/configs";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 export const initialState: RoomState = {
   code: null,
@@ -48,10 +48,10 @@ export const endPhase = createAsyncThunk("room/endPhase", async (code: string) =
   return await res.json();
 });
 
-export const createNewRoom = createAsyncThunk("room/create", async (userName: string, { rejectWithValue }) => {
+export const createNewRoom = createAsyncThunk("room/create", async (hostName: string, { rejectWithValue }) => {
   try {
     const response = await axios.post(`${BASE_URL}/api/rooms/create`, {
-      params: { userName: userName },
+      hostname: hostName,
     });
 
     if (response.status === HttpStatusCode.Ok || response.status === HttpStatusCode.Created) {

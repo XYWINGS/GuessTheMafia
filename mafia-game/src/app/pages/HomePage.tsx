@@ -1,10 +1,15 @@
 "use client";
 import React, { useState } from "react";
+import { useAppDispatch } from "../store/store";
+import { createNewRoom } from "../slices/roomSlice";
 
 const HomePage = () => {
   const [roomCode, setRoomCode] = useState("");
   const [username, setUsername] = useState("kanna");
-  const createGameRoom = () => {};
+  const dispatch = useAppDispatch();
+  const createGameRoom = () => {
+    dispatch(createNewRoom(username));
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
