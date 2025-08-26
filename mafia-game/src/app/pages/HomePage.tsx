@@ -1,12 +1,13 @@
 "use client";
 import React, { useState } from "react";
-import { useAppDispatch } from "../store/store";
+import { useAppDispatch, useAppSelector } from "../store/store";
 import { createNewRoom } from "../slices/roomSlice";
 
 const HomePage = () => {
   const [roomCode, setRoomCode] = useState("");
   const [username, setUsername] = useState("kanna");
   const dispatch = useAppDispatch();
+
   const createGameRoom = () => {
     dispatch(createNewRoom(username));
   };

@@ -2,14 +2,13 @@ import { enqueueSnackbar } from "notistack";
 import axios, { HttpStatusCode } from "axios";
 import { getErrorMessage } from "../configs/utils";
 import { BASE_URL, RoomState } from "../configs/configs";
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 export const initialState: RoomState = {
   code: null,
   phase: "lobby",
   players: [],
   status: "idle",
-  inspectorResult: null,
 };
 
 // --- Thunks ---
@@ -78,9 +77,17 @@ export const roomSlice = createSlice({
   extraReducers: (builder) => {
     builder
       //Create room
-      .addCase(createNewRoom.fulfilled, (state, action) => {
-        // state.players = action.payload.players;
-        state.status = action.payload.status;
+      .addCase(createNewRoom.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(createNewRoom.fulfilled, (state, action: PayloadAction<RoomState>) => {
+        state.status = "idle";
+        state.code = action.payload.code;
+        state.phase = action.payload.phase as RoomState["phase"];
+        state.players = action.payload.players;
+      })
+      .addCase(createNewRoom.rejected, (state) => {
+        state.status = "failed";
       })
       // Fetch room
       .addCase(fetchRoom.fulfilled, (state, action) => {
@@ -100,9 +107,6 @@ export const roomSlice = createSlice({
       // End phase
       .addCase(endPhase.fulfilled, (state, action) => {
         state.phase = action.payload.room?.phase || state.phase;
-        if (action.payload.inspectorResult) {
-          state.inspectorResult = action.payload.inspectorResult;
-        }
       });
   },
 });
