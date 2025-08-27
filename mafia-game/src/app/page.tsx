@@ -68,7 +68,8 @@ export default function MainPage() {
       setChatMessages(data.chatMessages || []);
     });
 
-    newSocket.on("player-assigned", (player: Player) => {
+    newSocket.on("session-joined", (player: Player) => {
+      console.log("Assigned current player:", player);
       setCurrentPlayer(player);
     });
 

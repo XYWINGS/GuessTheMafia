@@ -4,12 +4,13 @@ import GameLobby from "../components/GameLobby";
 import GameInterface from "../components/GameInterface";
 import SessionBrowser from "../components/SessionBrowser";
 import { useSocket } from "../page";
+import { Player } from "../configs/configs";
 
 export default function GamePage() {
   const { socket, players, gameState, currentPlayer, timeOfDay, dayCount, isConnected } = useSocket();
-  // console.log("Game page data:", { players, gameState, currentPlayer, timeOfDay, dayCount, isConnected });
   const [currentSession, setCurrentSession] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
 
   // Show loading state until connection is established
   useEffect(() => {
@@ -18,15 +19,24 @@ export default function GamePage() {
     }
   }, [socket]);
 
+  useEffect(() => {
+    console.log("currentPlayer changed:", currentPlayer);
+  }, [currentPlayer]);
+
   const createSession = (playerName: string) => {
     if (socket && isConnected) {
       console.log("Creating session with player:", playerName);
-      socket.emit("create-session", playerName);
 
+      // Set up the listener first
       socket.once("session-created", (data: any) => {
         console.log("Session created:", data.sessionId);
+        console.log("Player data in create session:", data.player);
         setCurrentSession(data.sessionId);
+        setLocalCurrentPlayer(data.player);
       });
+
+      // Then emit the event
+      socket.emit("create-session", playerName);
     } else {
       console.error("Socket is not connected");
       alert("Unable to connect to game server. Please refresh the page.");
@@ -36,12 +46,17 @@ export default function GamePage() {
   const joinSession = (sessionId: string, playerName: string) => {
     if (socket && isConnected) {
       console.log("Joining session:", sessionId, "with player:", playerName);
-      socket.emit("join-session", { sessionId, playerName });
 
+      // Set up the listener first
       socket.once("session-joined", (data: any) => {
         console.log("Joined session:", data.sessionId);
+        console.log("Player data in join session:", data.player);
         setCurrentSession(data.sessionId);
+        setLocalCurrentPlayer(data.player);
       });
+
+      // Then emit the event
+      socket.emit("join-session", { sessionId, playerName });
     } else {
       console.error("Socket is not connected");
       alert("Unable to connect to game server. Please refresh the page.");
@@ -72,6 +87,8 @@ export default function GamePage() {
 
       return () => {
         socket.off("error");
+        socket.off("session-created");
+        socket.off("session-joined");
       };
     }
   }, [socket]);
@@ -110,7 +127,7 @@ export default function GamePage() {
     return <SessionBrowser onCreateSession={createSession} onJoinSession={joinSession} />;
   }
 
-  if (!currentPlayer) {
+  if (!localCurrentPlayer) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center">
@@ -125,7 +142,7 @@ export default function GamePage() {
     <div className="min-h-screen bg-gray-900 text-white">
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-4xl font-bold text-purple-400">Village Game</h1>
+          <h1 className="text-4xl font-bold text-purple-400">Guess the Demon</h1>
           <div className="flex items-center">
             <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? "bg-green-400" : "bg-red-400"}`}></div>
             <div className="text-sm bg-gray-800 px-3 py-1 rounded">Session: {currentSession.slice(0, 8)}...</div>
@@ -134,15 +151,16 @@ export default function GamePage() {
 
         {gameState === "lobby" ? (
           <GameLobby
-            // players={players}
+            players={players}
             onStartGame={startGame}
+            currentPlayer={localCurrentPlayer}
           />
         ) : (
           <GameInterface
-            // players={players}
-            // currentPlayer={currentPlayer}
-            // timeOfDay={timeOfDay}
-            // dayCount={dayCount}
+            players={players}
+            currentPlayer={localCurrentPlayer}
+            timeOfDay={timeOfDay}
+            dayCount={dayCount}
             onToggleTime={toggleTimeOfDay}
           />
         )}

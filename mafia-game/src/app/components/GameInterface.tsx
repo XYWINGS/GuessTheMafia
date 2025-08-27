@@ -1,10 +1,15 @@
 "use client";
 
+import { Player } from "../configs/configs";
 import { useSocket } from "../page";
 import DayPhase from "./phases/DayPhase";
 import NightPhase from "./phases/NightPhase";
 
 interface GameInterfaceProps {
+  players: Player[];
+  currentPlayer: Player;
+  timeOfDay: "day" | "night";
+  dayCount: number;
   onToggleTime: () => void;
 }
 

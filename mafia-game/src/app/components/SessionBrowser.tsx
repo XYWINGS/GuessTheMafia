@@ -61,7 +61,7 @@ export default function SessionBrowser({ onJoinSession, onCreateSession }: Sessi
           <span className="text-sm text-green-400">Connected to server</span>
         </div>
 
-        <h1 className="text-2xl font-bold mb-6 text-center">Village Game Sessions</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Game Sessions</h1>
 
         <div className="mb-6">
           <label className="block mb-2">Your Name</label>

@@ -1,13 +1,16 @@
 "use client";
 import { Player } from "../configs/configs";
+
 import { useSocket } from "../page";
-
 interface GameLobbyProps {
+  players: Player[];
   onStartGame: () => void;
+  currentPlayer: Player;
 }
-
-export default function GameLobby({ onStartGame }: GameLobbyProps) {
-  const { players } = useSocket();
+export default function GameLobby({ players, onStartGame }: GameLobbyProps) {
+  console.log("Rendering GameLobby with players:", players);
+  const { currentPlayer } = useSocket();
+  console.log("Current player in GameLobby:", currentPlayer);
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
