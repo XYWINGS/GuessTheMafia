@@ -3,9 +3,6 @@ import { SnackbarProvider } from "notistack";
 import { useState, useEffect, useContext, createContext } from "react";
 import { io, Socket } from "socket.io-client";
 
-// Types
-export type PlayerRole = "villager" | "demon" | "demonLeader" | "inspector" | "doctor" | "vampire";
-
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 
 export type GameState = "playing" | "lobby" | "ended";
@@ -142,6 +139,11 @@ export default function MainPage() {
     });
 
     newSocket.on("session-created", (player: CurrentPlayerState) => {
+      setCurrentPlayer(player);
+    });
+
+    newSocket.on("your-role", (player: CurrentPlayerState) => {
+      console.log("Received your-role event:", player);
       setCurrentPlayer(player);
     });
 
@@ -325,7 +327,7 @@ function GamePage() {
 function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps) {
   const { socket, isConnected } = useSocket();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = useState("kanna");
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -454,7 +456,6 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-center">Game Lobby</h2>
-
       <div className="mb-6">
         <h3 className="text-xl font-semibold mb-2">Players ({players.length}/10)</h3>
         <ul className="bg-gray-700 rounded p-4">
@@ -465,19 +466,18 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
           ))}
         </ul>
       </div>
-
-      <div className="text-center">
-        <button
-          onClick={onStartGame}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-          //  TODO change this accomdate number of players later
-          disabled={!currentPlayer?.player.isHost}
-        >
-          Start Game
-        </button>
-        {players.length < 5 && <p className="mt-2 text-yellow-400">Need at least 5 players to start</p>}
-      </div>
-
+      {/* // TODO change this accomdate number of players later */}
+      {currentPlayer?.player.isHost && (
+        <div className="text-center">
+          <button
+            onClick={onStartGame}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+          >
+            Start Game
+          </button>
+          {players.length < 5 && <p className="mt-2 text-yellow-400">Need at least 5 players to start</p>}
+        </div>
+      )}
       <div className="mt-6 bg-gray-700 p-4 rounded">
         <h3 className="text-lg font-semibold mb-2">Game Rules</h3>
         <ul className="list-disc list-inside space-y-1">
@@ -656,20 +656,21 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
     setInvestigationResult(null);
   }, [players]);
 
+  // console.log("Current Player in NightPhase:", currentPlayer);
   const handleAction = () => {
     if (!selectedPlayer || !currentPlayer) return;
 
     let actionType = "";
 
     switch (currentPlayer.player.role) {
-      case "demon":
+      case Role.DEMON:
       case "demonLeader":
         actionType = "kill";
         break;
-      case "doctor":
+      case Role.DOCTOR:
         actionType = "save";
         break;
-      case "inspector":
+      case Role.INSPECTOR:
         actionType = "investigate";
         // Simulate investigation result
         const targetPlayer = players.find((p) => p.id === selectedPlayer);
@@ -691,7 +692,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
     if (!currentPlayer) return null;
 
     switch (currentPlayer.player.role) {
-      case "demon":
+      case Role.DEMON:
         return (
           <div className="bg-red-900/30 p-4 rounded-lg mb-4">
             <h4 className="text-lg font-semibold mb-2 text-red-400">Demon - Select a player to kill</h4>
@@ -700,7 +701,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
           </div>
         );
 
-      case "demonLeader":
+      case Role.DEMON_LEADER:
         return (
           <div className="bg-purple-900/30 p-4 rounded-lg mb-4">
             <h4 className="text-lg font-semibold mb-2 text-purple-400">Demon Leader - Select a player to kill</h4>
@@ -709,7 +710,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
           </div>
         );
 
-      case "doctor":
+      case Role.DOCTOR:
         return (
           <div className="bg-green-900/30 p-4 rounded-lg mb-4">
             <h4 className="text-lg font-semibold mb-2 text-green-400">Doctor - Select a player to save</h4>
@@ -720,7 +721,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
           </div>
         );
 
-      case "inspector":
+      case Role.INSPECTOR:
         return (
           <div className="bg-blue-900/30 p-4 rounded-lg mb-4">
             <h4 className="text-lg font-semibold mb-2 text-blue-400">Inspector - Select a player to investigate</h4>
@@ -759,6 +760,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-4 text-blue-400">Night Phase - Special Actions</h2>
+      <h2 className="text-2xl font-bold mb-4 text-blue-400">ur role {currentPlayer.player.role}</h2>
 
       {renderRoleInstructions()}
 
