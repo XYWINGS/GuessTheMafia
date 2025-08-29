@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Guess The Mafia",
+  title: "Guess The Demons",
   description: "Online Role Play Game",
 };
 

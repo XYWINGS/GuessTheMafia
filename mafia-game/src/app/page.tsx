@@ -7,6 +7,17 @@ import { io, Socket } from "socket.io-client";
 export type Role = "villager" | "demon" | "demonLeader" | "doctor" | "inspector";
 export type GameState = "lobby" | "playing" | "finished";
 
+// GameLobby Component
+interface GameLobbyProps {
+  players: Player[];
+  onStartGame: () => void;
+  currentPlayer: Player;
+}
+type CurrentPlayerState = {
+  sessionId: string;
+  player: Player;
+};
+
 export interface Player {
   id: string;
   name: string;
@@ -20,7 +31,7 @@ interface SocketContextType {
   socket: Socket | null;
   players: Player[];
   gameState: GameState;
-  currentPlayer: Player | null;
+  currentPlayer: CurrentPlayerState | null;
   timeOfDay: "day" | "night";
   dayCount: number;
   chatMessages: any[];
@@ -43,7 +54,7 @@ export default function MainPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>("lobby");
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayerState | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [dayCount, setDayCount] = useState(1);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
@@ -79,7 +90,12 @@ export default function MainPage() {
       setChatMessages(data.chatMessages || []);
     });
 
-    newSocket.on("session-joined", (player: Player) => {
+    newSocket.on("session-joined", (player: CurrentPlayerState) => {
+      console.log("Assigned current player:", player);
+      setCurrentPlayer(player);
+    });
+
+    newSocket.on("session-created", (player: CurrentPlayerState) => {
       console.log("Assigned current player:", player);
       setCurrentPlayer(player);
     });
@@ -262,18 +278,8 @@ function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps)
   );
 }
 
-// GameLobby Component
-interface GameLobbyProps {
-  players: Player[];
-  onStartGame: () => void;
-  currentPlayer: Player;
-}
-
 function GameLobby({ players, onStartGame }: GameLobbyProps) {
-  console.log("Rendering GameLobby with players:", players);
-  const { currentPlayer } = useSocket();
-  console.log("Current player in GameLobby:", currentPlayer);
-
+  const { currentPlayer } = useSocket() as { currentPlayer: CurrentPlayerState | null };
   return (
     <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-center">Game Lobby</h2>
@@ -293,7 +299,8 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
         <button
           onClick={onStartGame}
           className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-          disabled={players.length < 5}
+          //  TODO change this accomdate number of players later
+          disabled={!currentPlayer?.player.isHost}
         >
           Start Game
         </button>
@@ -317,7 +324,7 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
 // DayPhase Component
 interface DayPhaseProps {
   players: Player[];
-  currentPlayer: Player | null;
+  currentPlayer: CurrentPlayerState | null;
   onVote: (targetId: string) => void;
   onSendMessage: (message: string) => void;
 }
@@ -360,12 +367,12 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
               className="flex-grow bg-gray-600 text-white rounded-l p-2"
               placeholder="Type your message..."
-              disabled={!currentPlayer?.isAlive}
+              disabled={!currentPlayer?.player.isAlive}
             />
             <button
               onClick={sendMessage}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 rounded-r"
-              disabled={!currentPlayer?.isAlive}
+              disabled={!currentPlayer?.player.isAlive}
             >
               Send
             </button>
@@ -375,9 +382,9 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
         <div>
           <h3 className="text-lg font-semibold mb-2">Vote to Eliminate</h3>
           <div className="bg-gray-700 rounded p-4">
-            {currentPlayer?.isAlive ? (
+            {currentPlayer?.player.isAlive ? (
               players
-                .filter((player) => player.id !== currentPlayer?.id && player.isAlive)
+                .filter((player) => player.id !== currentPlayer?.player.id && player.isAlive)
                 .map((player) => (
                   <div key={player.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-600 rounded">
                     <span>{player.name}</span>
@@ -402,7 +409,7 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
 // NightPhase Component
 interface NightPhaseProps {
   players: Player[];
-  currentPlayer: Player | null;
+  currentPlayer: CurrentPlayerState | null;
   onAction: (targetId: string, actionType: string) => void;
 }
 
@@ -423,7 +430,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
 
     let actionType = "";
 
-    switch (currentPlayer.role) {
+    switch (currentPlayer.player.role) {
       case "demon":
       case "demonLeader":
         actionType = "kill";
@@ -452,7 +459,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   const renderRoleInstructions = () => {
     if (!currentPlayer) return null;
 
-    switch (currentPlayer.role) {
+    switch (currentPlayer.player.role) {
       case "demon":
         return (
           <div className="bg-red-900/30 p-4 rounded-lg mb-4">
@@ -505,7 +512,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   const canPerformAction = () => {
     if (!currentPlayer) return false;
 
-    const role = currentPlayer.role;
+    const role = currentPlayer.player.role;
     return role === "demon" || role === "demonLeader" || role === "doctor" || role === "inspector";
   };
 
@@ -532,9 +539,9 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
               .filter(
                 (player) =>
                   // Demons can't kill other demons (except in some game variants)
-                  currentPlayer.role === "demon" ||
-                  currentPlayer.role === "demonLeader" ||
-                  currentPlayer.role !== player.role
+                  currentPlayer.player.role === "demon" ||
+                  currentPlayer.player.role === "demonLeader" ||
+                  currentPlayer.player.role !== player.role
               )
               .map((player) => (
                 <div
@@ -557,7 +564,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
             disabled={!selectedPlayer}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 text-white font-bold py-2 px-4 rounded"
           >
-            {currentPlayer.role === "inspector" ? "Investigate" : "Confirm Selection"}
+            {currentPlayer.player.role === "inspector" ? "Investigate" : "Confirm Selection"}
           </button>
         </div>
       )}
@@ -566,7 +573,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
         <div className="bg-gray-700 p-4 rounded-lg mb-4">
           <h4 className="text-lg font-semibold mb-2 text-green-400">Action Completed</h4>
           <p className="text-sm">
-            {currentPlayer.role === "inspector"
+            {currentPlayer.player.role === "inspector"
               ? "You have completed your investigation."
               : "Your selection has been recorded. Waiting for other players..."}
           </p>
@@ -623,7 +630,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
   const handleVote = (targetId: string) => {
     if (socket && currentPlayer) {
       socket.emit("vote", {
-        voterId: currentPlayer.id,
+        voterId: currentPlayer.player.id,
         targetId,
       });
     }
@@ -632,7 +639,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
   const handleNightAction = (targetId: string, actionType: string) => {
     if (socket && currentPlayer) {
       socket.emit("night-action", {
-        playerId: currentPlayer.id,
+        playerId: currentPlayer.player.id,
         targetId,
         actionType,
       });
@@ -642,7 +649,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
   const sendChatMessage = (message: string) => {
     if (socket && currentPlayer) {
       socket.emit("chat-message", {
-        playerId: currentPlayer.id,
+        playerId: currentPlayer.player.id,
         message,
       });
     }
@@ -672,7 +679,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
         </div>
 
         <div>
-          <span className="bg-purple-600 px-3 py-1 rounded-full capitalize">{currentPlayer?.role}</span>
+          <span className="bg-purple-600 px-3 py-1 rounded-full capitalize">{currentPlayer?.player.role}</span>
         </div>
       </div>
 
@@ -691,7 +698,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
         <button
           onClick={onToggleTime}
           className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-          disabled={!currentPlayer?.isHost}
+          disabled={!currentPlayer?.player.isHost}
         >
           {timeOfDay === "day" ? "End Day" : "End Night"}
         </button>
@@ -728,6 +735,7 @@ function GamePage() {
         console.log("Player data in create session:", data.player);
         setCurrentSession(data.sessionId);
         setLocalCurrentPlayer(data.player);
+        //Join Session(data.sessionId, playerName);
       });
 
       // Then emit the event
