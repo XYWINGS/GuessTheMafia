@@ -645,18 +645,21 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
   );
 }
 
-function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
+function NightPhase({ onAction }: NightPhaseProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [actionCompleted, setActionCompleted] = useState(false);
   const [investigationResult, setInvestigationResult] = useState<string | null>(null);
+  const { players, currentPlayer, gamePhase, dayCount, socket } = useSocket();
+
   // Reset action when phase changes
   useEffect(() => {
-    setActionCompleted(false);
-    setSelectedPlayer("");
-    setInvestigationResult(null);
-  }, [players]);
+    if (gamePhase?.phase === GamePhase.DAY) {
+      setActionCompleted(false);
+      setSelectedPlayer("");
+      setInvestigationResult(null);
+    }
+  }, [gamePhase]);
 
-  // console.log("Current Player in NightPhase:", currentPlayer);
   const handleAction = () => {
     if (!selectedPlayer || !currentPlayer) return;
 
@@ -745,7 +748,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
     if (!currentPlayer) return false;
 
     const role = currentPlayer.player.role;
-    return role === "demon" || role === "demonLeader" || role === "doctor" || role === "inspector";
+    return role === Role.DEMON || role === Role.DEMON_LEADER || role === Role.DOCTOR || role === Role.INSPECTOR;
   };
 
   if (!currentPlayer) {
@@ -760,7 +763,6 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-4 text-blue-400">Night Phase - Special Actions</h2>
-      <h2 className="text-2xl font-bold mb-4 text-blue-400">ur role {currentPlayer.player.role}</h2>
 
       {renderRoleInstructions()}
 
@@ -769,13 +771,18 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
           <h3 className="text-lg font-semibold mb-3">Select a Player</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             {players
-              .filter(
-                (player) =>
-                  // Demons can't kill other demons (except in some game variants)
-                  currentPlayer.player.role === "demon" ||
-                  currentPlayer.player.role === "demonLeader" ||
-                  currentPlayer.player.role !== player.role
-              )
+              .filter((player) => {
+                if (player.id === currentPlayer.player.id) return false;
+
+                if (
+                  (currentPlayer.player.role === Role.DEMON || currentPlayer.player.role === Role.DEMON_LEADER) &&
+                  (player.role === Role.DEMON || player.role === Role.DEMON_LEADER)
+                ) {
+                  return false;
+                }
+
+                return true;
+              })
               .map((player) => (
                 <div
                   key={player.id}
@@ -827,8 +834,8 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
         </div>
       )}
 
-      {/* <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2">Player Status</h3>
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Players</h3>
         <div className="bg-gray-700 rounded p-3">
           {players.map((player) => (
             <div
@@ -839,11 +846,10 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
                 <div className={`w-3 h-3 rounded-full mr-2 ${player.isAlive ? "bg-green-400" : "bg-red-400"}`}></div>
                 <span>{player.name}</span>
               </div>
-              <span className="text-xs bg-gray-600 px-2 py-1 rounded capitalize">{player.role}</span>
             </div>
           ))}
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }
