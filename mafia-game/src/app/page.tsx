@@ -8,9 +8,22 @@ export type PlayerRole = "villager" | "demon" | "demonLeader" | "inspector" | "d
 
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 
-export type GameState = "day" | "demons" | "doctor" | "inspector" | "lobby" | "ended";
+export type GameState = "playing" | "lobby" | "ended";
 
-export type Role = "villager" | "demon" | "demonLeader" | "doctor" | "inspector";
+export enum GamePhase {
+  DAY = "day",
+  DEMONS = "demons",
+  DOCTOR = "doctor",
+  INSPECTOR = "inspector",
+}
+
+export enum Role {
+  VILLAGER = "villager",
+  DEMON = "demon",
+  DEMON_LEADER = "demonLeader",
+  DOCTOR = "doctor",
+  INSPECTOR = "inspector",
+}
 
 // SessionBrowser Component
 interface Session {
@@ -40,6 +53,17 @@ type CurrentPlayerState = {
   sessionId: string;
   player: Player;
 };
+type GamePhaseState = {
+  phase: GamePhase;
+  duration: number;
+};
+// DayPhase Component
+interface DayPhaseProps {
+  players: Player[];
+  currentPlayer: CurrentPlayerState | null;
+  onVote: (targetId: string, targetName: string) => void;
+  onSendMessage: (message: string) => void;
+}
 
 export interface Player {
   id: string;
@@ -55,7 +79,7 @@ interface SocketContextType {
   players: Player[];
   gameState: GameState;
   currentPlayer: CurrentPlayerState | null;
-  timeOfDay: "day" | "night";
+  gamePhase: GamePhaseState;
   dayCount: number;
   chatMessages: any[];
   isConnected: boolean;
@@ -67,7 +91,7 @@ const SocketContext = createContext<SocketContextType>({
   players: [],
   gameState: "lobby",
   currentPlayer: null,
-  timeOfDay: "day",
+  gamePhase: { phase: GamePhase.DAY, duration: 0 },
   dayCount: 1,
   chatMessages: [],
   isConnected: false,
@@ -78,7 +102,7 @@ export default function MainPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>("lobby");
   const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayerState | null>(null);
-  const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
+  const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
   const [dayCount, setDayCount] = useState(1);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -107,7 +131,7 @@ export default function MainPage() {
     newSocket.on("game-state-update", (data: any) => {
       setPlayers(data.players);
       setGameState(data.gameState);
-      setTimeOfDay(data.timeOfDay);
+      setGamePhase(data.gamePhase);
       setDayCount(data.dayCount);
       setIsConnected(true);
       setChatMessages(data.chatMessages || []);
@@ -119,6 +143,10 @@ export default function MainPage() {
 
     newSocket.on("session-created", (player: CurrentPlayerState) => {
       setCurrentPlayer(player);
+    });
+
+    newSocket.on("phase-change", (data: GamePhaseState) => {
+      setGamePhase(data);
     });
 
     newSocket.on("chat-message", (message: any) => {
@@ -144,7 +172,7 @@ export default function MainPage() {
           players,
           gameState,
           currentPlayer,
-          timeOfDay,
+          gamePhase,
           dayCount,
           chatMessages,
           isConnected,
@@ -159,6 +187,140 @@ export default function MainPage() {
 }
 
 export const useSocket = () => useContext(SocketContext);
+
+// GamePage Component
+function GamePage() {
+  const { socket, players, gameState, isConnected } = useSocket();
+  const [currentSession, setCurrentSession] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
+
+  // Show loading state until connection is established
+  useEffect(() => {
+    if (socket !== null) {
+      setIsLoading(false);
+    }
+  }, [socket]);
+
+  const createSession = (playerName: string) => {
+    if (socket && isConnected) {
+      socket.once("session-created", (data: any) => {
+        setCurrentSession(data.sessionId);
+        setLocalCurrentPlayer(data.player);
+      });
+
+      socket.emit("create-session", playerName);
+    } else {
+      console.error("Socket is not connected");
+      alert("Unable to connect to game server. Please refresh the page.");
+    }
+  };
+
+  const joinSession = (sessionId: string, playerName: string) => {
+    if (socket && isConnected) {
+      console.log("Joining session:", sessionId, "with player:", playerName);
+
+      // Set up the listener first
+      socket.once("session-joined", (data: any) => {
+        setCurrentSession(data.sessionId);
+        setLocalCurrentPlayer(data.player);
+      });
+
+      // Then emit the event
+      socket.emit("join-session", { sessionId, playerName });
+    } else {
+      console.error("Socket is not connected");
+      alert("Unable to connect to game server. Please refresh the page.");
+    }
+  };
+
+  const startGame = () => {
+    if (socket && currentSession && isConnected) {
+      socket.emit("start-game", currentSession);
+    } else {
+      console.error("Socket is not connected or no session");
+    }
+  };
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("error", (data: any) => {
+        alert(data.message);
+      });
+
+      return () => {
+        socket.off("error");
+        socket.off("session-created");
+        socket.off("session-joined");
+      };
+    }
+  }, [socket]);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Connecting to game server...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show connection error if not connected
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="bg-gray-800 p-6 rounded-lg max-w-md text-center">
+          <h1 className="text-2xl font-bold mb-4 text-red-400">Connection Error</h1>
+          <p className="mb-4">Unable to connect to the game server.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentSession) {
+    return <SessionBrowser onCreateSession={createSession} onJoinSession={joinSession} />;
+  }
+
+  if (!localCurrentPlayer) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Joining game session...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-4xl font-bold text-purple-400">Guess the Demon</h1>
+          <div className="flex items-center">
+            <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? "bg-green-400" : "bg-red-400"}`}></div>
+            <div className="text-sm bg-gray-800 px-3 py-1 rounded">Session: {currentSession.slice(0, 8)}...</div>
+          </div>
+        </div>
+
+        {gameState === "lobby" ? (
+          <GameLobby players={players} onStartGame={startGame} currentPlayer={localCurrentPlayer} />
+        ) : (
+          <GameInterface />
+        )}
+      </main>
+    </div>
+  );
+}
 
 function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps) {
   const { socket, isConnected } = useSocket();
@@ -330,12 +492,81 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
   );
 }
 
-// DayPhase Component
-interface DayPhaseProps {
-  players: Player[];
-  currentPlayer: CurrentPlayerState | null;
-  onVote: (targetId: string, targetName: string) => void;
-  onSendMessage: (message: string) => void;
+function GameInterface() {
+  const { players, currentPlayer, gamePhase, dayCount, socket } = useSocket();
+  const phase = gamePhase?.phase;
+  const handleVote = (targetId: string, targetName: string) => {
+    if (socket && currentPlayer) {
+      socket.emit("vote", {
+        sessionId: currentPlayer.sessionId,
+        voterId: currentPlayer.player.id,
+        voterName: currentPlayer.player.name,
+        targetId,
+        targetName,
+      });
+    }
+  };
+
+  const handleNightAction = (targetId: string, actionType: string) => {
+    if (socket && currentPlayer) {
+      socket.emit("night-action", {
+        playerId: currentPlayer.player.id,
+        targetId,
+        actionType,
+      });
+    }
+  };
+
+  const sendChatMessage = (message: string) => {
+    if (socket && currentPlayer) {
+      socket.emit("chat-message", {
+        sessionId: currentPlayer.sessionId,
+        playerId: currentPlayer.player.id,
+        message,
+      });
+    }
+  };
+
+  const alivePlayers = players.filter((player) => player.isAlive);
+  const demonPlayers = players.filter(
+    (player) => (player.role === "demon" || player.role === "demonLeader") && player.isAlive
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg">
+        <div>
+          <span
+            className={`px-3 py-1 rounded-full ${
+              phase === GamePhase.DAY ? "bg-yellow-500 text-black" : "bg-blue-900 text-white"
+            }`}
+          >
+            {phase === GamePhase.DAY ? "☀️ Day" : "🌙 Night"} {dayCount}
+          </span>
+        </div>
+
+        <div className="text-center">
+          <p className="text-sm">Alive: {alivePlayers.length}</p>
+          <p className="text-sm">Demons: {demonPlayers.length}</p>
+        </div>
+
+        <div>
+          <span className="bg-purple-600 px-3 py-1 rounded-full capitalize">{currentPlayer?.player.role}</span>
+        </div>
+      </div>
+
+      {phase === GamePhase.DAY ? (
+        <DayPhase
+          players={alivePlayers}
+          currentPlayer={currentPlayer}
+          onVote={handleVote}
+          onSendMessage={sendChatMessage}
+        />
+      ) : (
+        <NightPhase players={alivePlayers} currentPlayer={currentPlayer} onAction={handleNightAction} />
+      )}
+    </div>
+  );
 }
 
 function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhaseProps) {
@@ -418,7 +649,6 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [actionCompleted, setActionCompleted] = useState(false);
   const [investigationResult, setInvestigationResult] = useState<string | null>(null);
-  console.log("Current Players in session:", players);
   // Reset action when phase changes
   useEffect(() => {
     setActionCompleted(false);
@@ -612,250 +842,6 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
           ))}
         </div>
       </div> */}
-    </div>
-  );
-}
-
-// GameInterface Component
-interface GameInterfaceProps {
-  players: Player[];
-  currentPlayer: Player;
-  timeOfDay: "day" | "night";
-  dayCount: number;
-  onToggleTime: () => void;
-}
-
-function GameInterface({ onToggleTime }: GameInterfaceProps) {
-  const { players, currentPlayer, timeOfDay, dayCount, socket } = useSocket();
-
-  const handleVote = (targetId: string, targetName: string) => {
-    if (socket && currentPlayer) {
-      socket.emit("vote", {
-        sessionId: currentPlayer.sessionId,
-        voterId: currentPlayer.player.id,
-        voterName: currentPlayer.player.name,
-        targetId,
-        targetName,
-      });
-    }
-  };
-
-  const handleNightAction = (targetId: string, actionType: string) => {
-    if (socket && currentPlayer) {
-      socket.emit("night-action", {
-        playerId: currentPlayer.player.id,
-        targetId,
-        actionType,
-      });
-    }
-  };
-
-  const sendChatMessage = (message: string) => {
-    if (socket && currentPlayer) {
-      socket.emit("chat-message", {
-        sessionId: currentPlayer.sessionId,
-        playerId: currentPlayer.player.id,
-        message,
-      });
-    }
-  };
-
-  const alivePlayers = players.filter((player) => player.isAlive);
-  const demonPlayers = players.filter(
-    (player) => (player.role === "demon" || player.role === "demonLeader") && player.isAlive
-  );
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg">
-        <div>
-          <span
-            className={`px-3 py-1 rounded-full ${
-              timeOfDay === "day" ? "bg-yellow-500 text-black" : "bg-blue-900 text-white"
-            }`}
-          >
-            {timeOfDay === "day" ? "☀️ Day" : "🌙 Night"} {dayCount}
-          </span>
-        </div>
-
-        <div className="text-center">
-          <p className="text-sm">Alive: {alivePlayers.length}</p>
-          <p className="text-sm">Demons: {demonPlayers.length}</p>
-        </div>
-
-        <div>
-          <span className="bg-purple-600 px-3 py-1 rounded-full capitalize">{currentPlayer?.player.role}</span>
-        </div>
-      </div>
-
-      {timeOfDay === "day" ? (
-        <DayPhase
-          players={alivePlayers}
-          currentPlayer={currentPlayer}
-          onVote={handleVote}
-          onSendMessage={sendChatMessage}
-        />
-      ) : (
-        <NightPhase players={alivePlayers} currentPlayer={currentPlayer} onAction={handleNightAction} />
-      )}
-
-      <div className="mt-6 text-center">
-        <button
-          onClick={onToggleTime}
-          className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-          disabled={!currentPlayer?.player.isHost}
-        >
-          {timeOfDay === "day" ? "End Day" : "End Night"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// GamePage Component
-function GamePage() {
-  const { socket, players, gameState, currentPlayer, timeOfDay, dayCount, isConnected } = useSocket();
-  const [currentSession, setCurrentSession] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
-
-  // Show loading state until connection is established
-  useEffect(() => {
-    if (socket !== null) {
-      setIsLoading(false);
-    }
-  }, [socket]);
-
-  const createSession = (playerName: string) => {
-    if (socket && isConnected) {
-      socket.once("session-created", (data: any) => {
-        setCurrentSession(data.sessionId);
-        setLocalCurrentPlayer(data.player);
-      });
-
-      socket.emit("create-session", playerName);
-    } else {
-      console.error("Socket is not connected");
-      alert("Unable to connect to game server. Please refresh the page.");
-    }
-  };
-
-  const joinSession = (sessionId: string, playerName: string) => {
-    if (socket && isConnected) {
-      console.log("Joining session:", sessionId, "with player:", playerName);
-
-      // Set up the listener first
-      socket.once("session-joined", (data: any) => {
-        setCurrentSession(data.sessionId);
-        setLocalCurrentPlayer(data.player);
-      });
-
-      // Then emit the event
-      socket.emit("join-session", { sessionId, playerName });
-    } else {
-      console.error("Socket is not connected");
-      alert("Unable to connect to game server. Please refresh the page.");
-    }
-  };
-
-  const startGame = () => {
-    if (socket && currentSession && isConnected) {
-      socket.emit("start-game", currentSession);
-    } else {
-      console.error("Socket is not connected or no session");
-    }
-  };
-
-  const toggleTimeOfDay = () => {
-    if (socket && currentSession && isConnected) {
-      socket.emit("toggle-time", currentSession);
-    } else {
-      console.error("Socket is not connected or no session");
-    }
-  };
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("error", (data: any) => {
-        alert(data.message);
-      });
-
-      return () => {
-        socket.off("error");
-        socket.off("session-created");
-        socket.off("session-joined");
-      };
-    }
-  }, [socket]);
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-4">Connecting to game server...</div>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show connection error if not connected
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="bg-gray-800 p-6 rounded-lg max-w-md text-center">
-          <h1 className="text-2xl font-bold mb-4 text-red-400">Connection Error</h1>
-          <p className="mb-4">Unable to connect to the game server.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentSession) {
-    return <SessionBrowser onCreateSession={createSession} onJoinSession={joinSession} />;
-  }
-
-  if (!localCurrentPlayer) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-4">Joining game session...</div>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-4xl font-bold text-purple-400">Guess the Demon</h1>
-          <div className="flex items-center">
-            <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? "bg-green-400" : "bg-red-400"}`}></div>
-            <div className="text-sm bg-gray-800 px-3 py-1 rounded">Session: {currentSession.slice(0, 8)}...</div>
-          </div>
-        </div>
-
-        {gameState === "lobby" ? (
-          <GameLobby players={players} onStartGame={startGame} currentPlayer={localCurrentPlayer} />
-        ) : (
-          <GameInterface
-            players={players}
-            currentPlayer={localCurrentPlayer}
-            timeOfDay={timeOfDay}
-            dayCount={dayCount}
-            onToggleTime={toggleTimeOfDay}
-          />
-        )}
-      </main>
     </div>
   );
 }
