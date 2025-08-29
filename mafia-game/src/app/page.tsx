@@ -4,8 +4,31 @@ import { useState, useEffect, useContext, createContext } from "react";
 import { io, Socket } from "socket.io-client";
 
 // Types
+export type PlayerRole = "villager" | "demon" | "demonLeader" | "inspector" | "doctor" | "vampire";
+
+export type KilledBy = "demons" | "vampire" | "villagers" | null;
+
+export type GameState = "day" | "demons" | "doctor" | "inspector" | "lobby" | "ended";
+
 export type Role = "villager" | "demon" | "demonLeader" | "doctor" | "inspector";
-export type GameState = "lobby" | "playing" | "finished";
+
+// SessionBrowser Component
+interface Session {
+  sessionId: string;
+  playerCount: number;
+  hostName: string;
+}
+// NightPhase Component
+interface NightPhaseProps {
+  players: Player[];
+  currentPlayer: CurrentPlayerState | null;
+  onAction: (targetId: string, actionType: string) => void;
+}
+
+interface SessionBrowserProps {
+  onJoinSession: (sessionId: string, playerName: string) => void;
+  onCreateSession: (playerName: string) => void;
+}
 
 // GameLobby Component
 interface GameLobbyProps {
@@ -91,12 +114,10 @@ export default function MainPage() {
     });
 
     newSocket.on("session-joined", (player: CurrentPlayerState) => {
-      console.log("Assigned current player:", player);
       setCurrentPlayer(player);
     });
 
     newSocket.on("session-created", (player: CurrentPlayerState) => {
-      console.log("Assigned current player:", player);
       setCurrentPlayer(player);
     });
 
@@ -138,18 +159,6 @@ export default function MainPage() {
 }
 
 export const useSocket = () => useContext(SocketContext);
-
-// SessionBrowser Component
-interface Session {
-  sessionId: string;
-  playerCount: number;
-  hostName: string;
-}
-
-interface SessionBrowserProps {
-  onJoinSession: (sessionId: string, playerName: string) => void;
-  onCreateSession: (playerName: string) => void;
-}
 
 function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps) {
   const { socket, isConnected } = useSocket();
@@ -325,14 +334,13 @@ function GameLobby({ players, onStartGame }: GameLobbyProps) {
 interface DayPhaseProps {
   players: Player[];
   currentPlayer: CurrentPlayerState | null;
-  onVote: (targetId: string) => void;
+  onVote: (targetId: string, targetName: string) => void;
   onSendMessage: (message: string) => void;
 }
 
 function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhaseProps) {
   const [message, setMessage] = useState("");
   const { chatMessages } = useSocket();
-
   const sendMessage = () => {
     if (message.trim() && currentPlayer) {
       onSendMessage(message);
@@ -364,7 +372,7 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+              onKeyUp={(e) => e.key === "Enter" && sendMessage()}
               className="flex-grow bg-gray-600 text-white rounded-l p-2"
               placeholder="Type your message..."
               disabled={!currentPlayer?.player.isAlive}
@@ -389,7 +397,7 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
                   <div key={player.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-600 rounded">
                     <span>{player.name}</span>
                     <button
-                      onClick={() => onVote(player.id)}
+                      onClick={() => onVote(player.id, player.name)}
                       className="px-3 py-1 rounded bg-gray-500 hover:bg-gray-400"
                     >
                       Vote
@@ -406,18 +414,11 @@ function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhasePro
   );
 }
 
-// NightPhase Component
-interface NightPhaseProps {
-  players: Player[];
-  currentPlayer: CurrentPlayerState | null;
-  onAction: (targetId: string, actionType: string) => void;
-}
-
 function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [actionCompleted, setActionCompleted] = useState(false);
   const [investigationResult, setInvestigationResult] = useState<string | null>(null);
-
+  console.log("Current Players in session:", players);
   // Reset action when phase changes
   useEffect(() => {
     setActionCompleted(false);
@@ -594,7 +595,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
         </div>
       )}
 
-      <div className="mt-6">
+      {/* <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">Player Status</h3>
         <div className="bg-gray-700 rounded p-3">
           {players.map((player) => (
@@ -610,7 +611,7 @@ function NightPhase({ players, currentPlayer, onAction }: NightPhaseProps) {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
@@ -627,11 +628,14 @@ interface GameInterfaceProps {
 function GameInterface({ onToggleTime }: GameInterfaceProps) {
   const { players, currentPlayer, timeOfDay, dayCount, socket } = useSocket();
 
-  const handleVote = (targetId: string) => {
+  const handleVote = (targetId: string, targetName: string) => {
     if (socket && currentPlayer) {
       socket.emit("vote", {
+        sessionId: currentPlayer.sessionId,
         voterId: currentPlayer.player.id,
+        voterName: currentPlayer.player.name,
         targetId,
+        targetName,
       });
     }
   };
@@ -649,6 +653,7 @@ function GameInterface({ onToggleTime }: GameInterfaceProps) {
   const sendChatMessage = (message: string) => {
     if (socket && currentPlayer) {
       socket.emit("chat-message", {
+        sessionId: currentPlayer.sessionId,
         playerId: currentPlayer.player.id,
         message,
       });
@@ -721,24 +726,13 @@ function GamePage() {
     }
   }, [socket]);
 
-  useEffect(() => {
-    console.log("currentPlayer changed:", currentPlayer);
-  }, [currentPlayer]);
-
   const createSession = (playerName: string) => {
     if (socket && isConnected) {
-      console.log("Creating session with player:", playerName);
-
-      // Set up the listener first
       socket.once("session-created", (data: any) => {
-        console.log("Session created:", data.sessionId);
-        console.log("Player data in create session:", data.player);
         setCurrentSession(data.sessionId);
         setLocalCurrentPlayer(data.player);
-        //Join Session(data.sessionId, playerName);
       });
 
-      // Then emit the event
       socket.emit("create-session", playerName);
     } else {
       console.error("Socket is not connected");
@@ -752,8 +746,6 @@ function GamePage() {
 
       // Set up the listener first
       socket.once("session-joined", (data: any) => {
-        console.log("Joined session:", data.sessionId);
-        console.log("Player data in join session:", data.player);
         setCurrentSession(data.sessionId);
         setLocalCurrentPlayer(data.player);
       });
