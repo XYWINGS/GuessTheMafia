@@ -510,6 +510,7 @@ function GameInterface() {
   const handleNightAction = (targetId: string, actionType: string) => {
     if (socket && currentPlayer) {
       socket.emit("night-action", {
+        sessionId: currentPlayer.sessionId,
         playerId: currentPlayer.player.id,
         targetId,
         actionType,
@@ -675,13 +676,6 @@ function NightPhase({ onAction }: NightPhaseProps) {
         break;
       case Role.INSPECTOR:
         actionType = "investigate";
-        // Simulate investigation result
-        const targetPlayer = players.find((p) => p.id === selectedPlayer);
-        if (targetPlayer) {
-          // Demon leader appears as villager to inspector
-          const apparentRole = targetPlayer.role === "demonLeader" ? "villager" : targetPlayer.role;
-          setInvestigationResult(`${targetPlayer.name} is a ${apparentRole}`);
-        }
         break;
       default:
         return;
