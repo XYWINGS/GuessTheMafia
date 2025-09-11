@@ -6,10 +6,8 @@ import { useSocket } from "../page";
 export function NightPhase({ onAction }: NightPhaseProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [actionCompleted, setActionCompleted] = useState(false);
-  const [investigationResult, setInvestigationResult] = useState<string | null>(null);
-  const { players, currentPlayer, gamePhase, dayCount } = useSocket();
+  const { players, currentPlayer, gamePhase, investigationResult, setInvestigationResult } = useSocket();
 
-  // Reset action when phase changes
   useEffect(() => {
     if (gamePhase?.phase === GamePhase.DAY) {
       setActionCompleted(false);
@@ -172,7 +170,9 @@ export function NightPhase({ onAction }: NightPhaseProps) {
           {investigationResult && (
             <div className="mt-3 p-3 bg-blue-900/30 rounded">
               <p className="font-semibold">Investigation Result:</p>
-              <p>{investigationResult}</p>
+              <p>
+                {investigationResult.targetName} is a {investigationResult.result}
+              </p>
             </div>
           )}
         </div>

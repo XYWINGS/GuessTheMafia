@@ -4,7 +4,11 @@ export const BASE_URL = "http://localhost:5000";
 
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 
-export type GameState = "playing" | "lobby" | "ended";
+export enum GameState {
+  PLAYING = "playing",
+  LOBBY = "lobby",
+  ENDED = "ended",
+}
 
 export enum GamePhase {
   DAY = "day",
@@ -79,4 +83,13 @@ export interface SocketContextType {
   dayCount: number;
   chatMessages: any[];
   isConnected: boolean;
+  investigationResult: InvestigationResult | null;
+  setInvestigationResult: (result: InvestigationResult | null) => void;
 }
+
+export type InvestigationResult = {
+  inspectorId: string;
+  targetId: string;
+  targetName: string;
+  result: string;
+};

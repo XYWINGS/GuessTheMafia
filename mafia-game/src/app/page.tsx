@@ -3,24 +3,34 @@ import { GamePage } from "./pages/MainPage";
 import { SnackbarProvider } from "notistack";
 import { io, Socket } from "socket.io-client";
 import { useState, useEffect, useContext, createContext } from "react";
-import { GamePhase, GameState, SocketContextType, CurrentPlayerState, GamePhaseState, Player } from "./configs/configs";
+import {
+  GamePhase,
+  GameState,
+  SocketContextType,
+  CurrentPlayerState,
+  GamePhaseState,
+  Player,
+  InvestigationResult,
+} from "./configs/configs";
 
 // Create the context with proper default values
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   players: [],
-  gameState: "lobby",
+  gameState: GameState.LOBBY,
   currentPlayer: null,
   gamePhase: { phase: GamePhase.DAY, duration: 0 },
   dayCount: 1,
   chatMessages: [],
   isConnected: false,
+  investigationResult: null,
+  setInvestigationResult: () => {},
 });
 
 export default function MainPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [gameState, setGameState] = useState<GameState>("lobby");
+  const [gameState, setGameState] = useState<GameState>(GameState.LOBBY);
   const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayerState | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
   const [dayCount, setDayCount] = useState(1);
@@ -45,6 +55,11 @@ export default function MainPage() {
 
     newSocket.on("disconnect", () => {
       setIsConnected(false);
+      setPlayers([]);
+      setGameState(GameState.LOBBY);
+      setGamePhase({ phase: GamePhase.DAY, duration: 0 });
+      setDayCount(0);
+      setChatMessages([]);
     });
 
     // Listen for game updates
@@ -71,13 +86,11 @@ export default function MainPage() {
     });
 
     newSocket.on("phase-change", (data: GamePhaseState) => {
-      console.log("Phase changed to:", data.phase);
       setGamePhase(data);
     });
 
-    newSocket.on("investigation-result", (data: any) => {
+    newSocket.on("investigation-result", (data: InvestigationResult) => {
       setInvestigationResult(data);
-      console.log("Investigation result received:", data);
     });
 
     newSocket.on("chat-message", (message: any) => {
@@ -107,6 +120,8 @@ export default function MainPage() {
           dayCount,
           chatMessages,
           isConnected,
+          investigationResult,
+          setInvestigationResult,
         }}
       >
         <SnackbarProvider maxSnack={3} preventDuplicate>
