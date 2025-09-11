@@ -2,7 +2,7 @@
 import { useSocket } from "../page";
 import { GameLobby } from "./GameLobby";
 import { useState, useEffect } from "react";
-import { Player } from "../configs/configs";
+import { GameState, Player } from "../configs/configs";
 import { GameInterface } from "./GameInterface";
 import { SessionBrowser } from "./SessionBrowser";
 
@@ -12,6 +12,12 @@ export function GamePage() {
   const [currentSession, setCurrentSession] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
+
+  console.log("current session:", currentSession);
+  console.log("local current player:", localCurrentPlayer);
+  console.log("isConnected:", isConnected);
+  console.log("gameState:", gameState);
+  console.log("players:", players);
 
   // Show loading state until connection is established
   useEffect(() => {
@@ -104,7 +110,7 @@ export function GamePage() {
     );
   }
 
-  if (!currentSession) {
+  if (!currentSession && players.length === 0) {
     return <SessionBrowser onCreateSession={createSession} onJoinSession={joinSession} />;
   }
 
@@ -130,7 +136,7 @@ export function GamePage() {
           </div>
         </div>
 
-        {gameState === "lobby" ? (
+        {gameState === GameState.LOBBY ? (
           <GameLobby players={players} onStartGame={startGame} currentPlayer={localCurrentPlayer} />
         ) : (
           <GameInterface />

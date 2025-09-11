@@ -1,14 +1,13 @@
 "use client";
 import { useSocket } from "../page";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Session, SessionBrowserProps } from "../configs/configs";
 
 export function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps) {
-  const { socket, isConnected } = useSocket();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const { socket, isConnected, sessions } = useSocket();
+  const [localSessions, setSessions] = useState(sessions);
   const [playerName, setPlayerName] = useState("kanna");
   const [selectedSession, setSelectedSession] = useState<string>("");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (socket && isConnected) {
@@ -16,7 +15,7 @@ export function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowse
 
       socket.on("sessions-list", (sessionsList: Session[]) => {
         setSessions(sessionsList);
-        setLoading(false);
+        // setLoading(false);
       });
 
       return () => {
@@ -27,7 +26,7 @@ export function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowse
 
   const refreshSessions = () => {
     if (socket && isConnected) {
-      setLoading(true);
+      // setLoading(true);
       socket.emit("get-sessions");
     }
   };
@@ -84,17 +83,17 @@ export function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowse
 
         <div>
           <h2 className="text-xl font-semibold mb-4">Join Existing Game</h2>
-
-          {loading ? (
+          {/* loading ? (
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-2"></div>
               Loading sessions...
             </div>
-          ) : sessions.length === 0 ? (
+          ) :  */}
+          {localSessions.length === 0 ? (
             <div className="text-center py-4">No active games found</div>
           ) : (
             <div className="space-y-3">
-              {sessions.map((session) => (
+              {localSessions.map((session) => (
                 <div
                   key={session.sessionId}
                   className={`p-4 rounded cursor-pointer transition-colors ${

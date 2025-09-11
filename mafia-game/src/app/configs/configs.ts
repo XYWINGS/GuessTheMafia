@@ -5,6 +5,7 @@ export const BASE_URL = "http://localhost:5000";
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 
 export enum GameState {
+  PRE_LOBBY = "pre-lobby",
   PLAYING = "playing",
   LOBBY = "lobby",
   ENDED = "ended",
@@ -77,6 +78,7 @@ export interface Player {
 export interface SocketContextType {
   socket: Socket | null;
   players: Player[];
+  sessions: Session[];
   gameState: GameState;
   currentPlayer: CurrentPlayerState | null;
   gamePhase: GamePhaseState;

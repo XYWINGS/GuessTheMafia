@@ -11,17 +11,19 @@ import {
   GamePhaseState,
   Player,
   InvestigationResult,
+  Session,
 } from "./configs/configs";
 
 // Create the context with proper default values
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   players: [],
-  gameState: GameState.LOBBY,
+  gameState: GameState.PRE_LOBBY,
   currentPlayer: null,
   gamePhase: { phase: GamePhase.DAY, duration: 0 },
   dayCount: 1,
   chatMessages: [],
+  sessions: [],
   isConnected: false,
   investigationResult: null,
   setInvestigationResult: () => {},
@@ -30,13 +32,14 @@ const SocketContext = createContext<SocketContextType>({
 export default function MainPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [gameState, setGameState] = useState<GameState>(GameState.LOBBY);
+  const [gameState, setGameState] = useState<GameState>(GameState.PRE_LOBBY);
   const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayerState | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
   const [dayCount, setDayCount] = useState(1);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [investigationResult, setInvestigationResult] = useState<any>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
     // Initialize socket connection
@@ -56,7 +59,7 @@ export default function MainPage() {
     newSocket.on("disconnect", () => {
       setIsConnected(false);
       setPlayers([]);
-      setGameState(GameState.LOBBY);
+      setGameState(GameState.PRE_LOBBY);
       setGamePhase({ phase: GamePhase.DAY, duration: 0 });
       setDayCount(0);
       setChatMessages([]);
@@ -81,7 +84,6 @@ export default function MainPage() {
     });
 
     newSocket.on("your-role", (player: CurrentPlayerState) => {
-      console.log("Received your-role event:", player);
       setCurrentPlayer(player);
     });
 
@@ -95,6 +97,11 @@ export default function MainPage() {
 
     newSocket.on("chat-message", (message: any) => {
       setChatMessages((prev) => [...prev, message]);
+    });
+
+    newSocket.on("sessions-list", (sessionsList: Session[]) => {
+      setSessions(sessionsList);
+      console.log("Received sessions list:", sessionsList);
     });
 
     // Cleanup on unmount
@@ -114,12 +121,13 @@ export default function MainPage() {
         value={{
           socket,
           players,
-          gameState,
-          currentPlayer,
-          gamePhase,
           dayCount,
-          chatMessages,
+          sessions,
+          gameState,
+          gamePhase,
           isConnected,
+          chatMessages,
+          currentPlayer,
           investigationResult,
           setInvestigationResult,
         }}
