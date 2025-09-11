@@ -1,45 +1,48 @@
 "use client";
+import {
+  Role,
+  Player,
+  Session,
+  GamePhase,
+  GameState,
+  GamePhaseState,
+  SocketContextType,
+  CurrentPlayerState,
+  InvestigationResult,
+} from "./configs/configs";
 import { GamePage } from "./pages/MainPage";
 import { SnackbarProvider } from "notistack";
 import { io, Socket } from "socket.io-client";
 import { useState, useEffect, useContext, createContext } from "react";
-import {
-  GamePhase,
-  GameState,
-  SocketContextType,
-  CurrentPlayerState,
-  GamePhaseState,
-  Player,
-  InvestigationResult,
-  Session,
-} from "./configs/configs";
 
 // Create the context with proper default values
 const SocketContext = createContext<SocketContextType>({
-  socket: null,
-  players: [],
-  gameState: GameState.PRE_LOBBY,
-  currentPlayer: null,
-  gamePhase: { phase: GamePhase.DAY, duration: 0 },
   dayCount: 1,
-  chatMessages: [],
+  players: [],
+  socket: null,
   sessions: [],
+  chatMessages: [],
   isConnected: false,
+  winningParty: null,
+  currentPlayer: null,
   investigationResult: null,
+  gameState: GameState.PRE_LOBBY,
   setInvestigationResult: () => {},
+  gamePhase: { phase: GamePhase.DAY, duration: 0 },
 });
 
 export default function MainPage() {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [dayCount, setDayCount] = useState(1);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [winningParty, setWinningParty] = useState<Role | null>(null);
+  const [investigationResult, setInvestigationResult] = useState<any>(null);
   const [gameState, setGameState] = useState<GameState>(GameState.PRE_LOBBY);
   const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayerState | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
-  const [dayCount, setDayCount] = useState(1);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [investigationResult, setInvestigationResult] = useState<any>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
     // Initialize socket connection
@@ -63,6 +66,9 @@ export default function MainPage() {
       setGamePhase({ phase: GamePhase.DAY, duration: 0 });
       setDayCount(0);
       setChatMessages([]);
+      setWinningParty(null);
+      setCurrentPlayer(null);
+      setInvestigationResult(null);
     });
 
     // Listen for game updates
@@ -73,6 +79,7 @@ export default function MainPage() {
       setDayCount(data.dayCount);
       setIsConnected(true);
       setChatMessages(data.chatMessages || []);
+      setWinningParty(data.winningParty);
     });
 
     newSocket.on("session-joined", (player: CurrentPlayerState) => {
@@ -101,7 +108,6 @@ export default function MainPage() {
 
     newSocket.on("sessions-list", (sessionsList: Session[]) => {
       setSessions(sessionsList);
-      console.log("Received sessions list:", sessionsList);
     });
 
     // Cleanup on unmount
@@ -127,6 +133,7 @@ export default function MainPage() {
           gamePhase,
           isConnected,
           chatMessages,
+          winningParty,
           currentPlayer,
           investigationResult,
           setInvestigationResult,

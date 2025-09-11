@@ -87,6 +87,7 @@ export interface SocketContextType {
   isConnected: boolean;
   investigationResult: InvestigationResult | null;
   setInvestigationResult: (result: InvestigationResult | null) => void;
+  winningParty: Role | null;
 }
 
 export type InvestigationResult = {

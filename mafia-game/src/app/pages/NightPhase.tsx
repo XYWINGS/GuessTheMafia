@@ -121,7 +121,11 @@ export function NightPhase({ onAction }: NightPhaseProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             {players
               .filter((player) => {
-                if (player.id === currentPlayer.player.id) return false;
+                if (
+                  (player.id === currentPlayer.player.id && (currentPlayer.player.role !== Role.DOCTOR)) ||
+                  !player.isAlive
+                )
+                  return false;
 
                 if (
                   (currentPlayer.player.role === Role.DEMON || currentPlayer.player.role === Role.DEMON_LEADER) &&

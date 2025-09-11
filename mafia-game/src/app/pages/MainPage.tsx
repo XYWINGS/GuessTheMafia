@@ -2,22 +2,16 @@
 import { useSocket } from "../page";
 import { GameLobby } from "./GameLobby";
 import { useState, useEffect } from "react";
-import { GameState, Player } from "../configs/configs";
 import { GameInterface } from "./GameInterface";
 import { SessionBrowser } from "./SessionBrowser";
+import { GameState, Player, Role } from "../configs/configs";
 
 // GamePage Component
 export function GamePage() {
-  const { socket, players, gameState, isConnected } = useSocket();
-  const [currentSession, setCurrentSession] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [currentSession, setCurrentSession] = useState<string>("");
+  const { socket, players, gameState, isConnected, winningParty } = useSocket();
   const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
-
-  console.log("current session:", currentSession);
-  console.log("local current player:", localCurrentPlayer);
-  console.log("isConnected:", isConnected);
-  console.log("gameState:", gameState);
-  console.log("players:", players);
 
   // Show loading state until connection is established
   useEffect(() => {
@@ -135,9 +129,20 @@ export function GamePage() {
             <div className="text-sm bg-gray-800 px-3 py-1 rounded">Session: {currentSession.slice(0, 8)}...</div>
           </div>
         </div>
-
         {gameState === GameState.LOBBY ? (
           <GameLobby players={players} onStartGame={startGame} currentPlayer={localCurrentPlayer} />
+        ) : gameState === GameState.ENDED && winningParty ? (
+          <div className="bg-gray-800 p-4 rounded-lg mb-6 text-center">
+            <h2 className="text-2xl font-bold mb-2 text-green-400">Game Over</h2>
+            <h3 className="text-xl mb-4">{winningParty === Role.DEMON ? "Demons Win!" : "Villagers Win!"}</h3>
+            <p className="mb-2">The game has ended. Thanks for playing!</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Return to Lobby
+            </button>
+          </div>
         ) : (
           <GameInterface />
         )}
