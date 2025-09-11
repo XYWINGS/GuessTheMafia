@@ -122,7 +122,7 @@ export function NightPhase({ onAction }: NightPhaseProps) {
             {players
               .filter((player) => {
                 if (
-                  (player.id === currentPlayer.player.id && (currentPlayer.player.role !== Role.DOCTOR)) ||
+                  (player.id === currentPlayer.player.id && currentPlayer.player.role !== Role.DOCTOR) ||
                   !player.isAlive
                 )
                   return false;
@@ -147,6 +147,7 @@ export function NightPhase({ onAction }: NightPhaseProps) {
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
                     <span>{player.name}</span>
+                    {player.id === currentPlayer.player.id && <span className="ml-2 text-xs text-gray-400">(You)</span>}
                   </div>
                 </div>
               ))}

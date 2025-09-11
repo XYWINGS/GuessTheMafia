@@ -36,8 +36,6 @@ export function GamePage() {
 
   const joinSession = (sessionId: string, playerName: string) => {
     if (socket && isConnected) {
-      console.log("Joining session:", sessionId, "with player:", playerName);
-
       // Set up the listener first
       socket.once("session-joined", (data: any) => {
         setCurrentSession(data.sessionId);
@@ -129,9 +127,12 @@ export function GamePage() {
             <div className="text-sm bg-gray-800 px-3 py-1 rounded">Session: {currentSession.slice(0, 8)}...</div>
           </div>
         </div>
-        {gameState === GameState.LOBBY ? (
+
+        {gameState === GameState.LOBBY && (
           <GameLobby players={players} onStartGame={startGame} currentPlayer={localCurrentPlayer} />
-        ) : gameState === GameState.ENDED && winningParty ? (
+        )}
+
+        {gameState === GameState.ENDED && winningParty && (
           <div className="bg-gray-800 p-4 rounded-lg mb-6 text-center">
             <h2 className="text-2xl font-bold mb-2 text-green-400">Game Over</h2>
             <h3 className="text-xl mb-4">{winningParty === Role.DEMON ? "Demons Win!" : "Villagers Win!"}</h3>
@@ -143,9 +144,9 @@ export function GamePage() {
               Return to Lobby
             </button>
           </div>
-        ) : (
-          <GameInterface />
         )}
+
+        {gameState === GameState.PLAYING && localCurrentPlayer && <GameInterface />}
       </main>
     </div>
   );
