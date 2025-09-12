@@ -1,14 +1,5 @@
 "use client";
-import {
-  Role,
-  Player,
-  Session,
-  GameState,
-  GamePhase,
-  GamePhaseState,
-  CurrentPlayerState,
-  InvestigationResult,
-} from "../configs/configs";
+import { Role, Player, Session, GameState, GamePhase, GamePhaseState, CurrentPlayerState } from "../configs/configs";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -54,6 +45,7 @@ export function useSocket() {
       setPlayers(data.players);
       setGameState(data.gameState);
       setGamePhase(data.gamePhase);
+      console.log("game phase in update io", data.gamePhase);
       setDayCount(data.dayCount);
       setChatMessages(data.chatMessages || []);
       setWinningParty(data.winningParty);
@@ -67,6 +59,10 @@ export function useSocket() {
     newSocket.on("investigation-result", setInvestigationResult);
     newSocket.on("chat-message", (msg: any) => setChatMessages((prev) => [...prev, msg]));
 
+    newSocket.on("vote-update", (data: any) => {
+      console.log("Vote update received:", data);
+    });
+
     return () => {
       newSocket.close();
     };
@@ -76,11 +72,11 @@ export function useSocket() {
     socket,
     players,
     sessions,
-    chatMessages,
     gameState,
     gamePhase,
     dayCount,
     isConnected,
+    chatMessages,
     winningParty,
     currentPlayer,
     investigationResult,

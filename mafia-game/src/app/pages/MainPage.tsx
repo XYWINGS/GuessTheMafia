@@ -14,9 +14,9 @@ export function GamePage() {
   const [localCurrentPlayer, setLocalCurrentPlayer] = useState<Player | null>(null);
   const { currentPlayer, socket, players, gameState, isConnected, winningParty, gamePhase, dayCount } =
     useSocketContext();
-  const phase = gamePhase?.phase;
 
-  // Show loading state until connection is established
+  let phase = gamePhase.phase ?? GamePhase.DAY;
+
   useEffect(() => {
     if (socket !== null) {
       setIsLoading(false);
@@ -203,7 +203,6 @@ export function GamePage() {
                 <span className="bg-purple-600 px-3 py-1 rounded-full capitalize">{currentPlayer?.player.role}</span>
               </div>
             </div>
-
             {phase === GamePhase.DAY ? (
               <DayPhase onVote={handleVote} onSendMessage={sendChatMessage} />
             ) : (

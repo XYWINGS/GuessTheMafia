@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DayPhaseProps } from "../configs/configs";
 import { useSocketContext } from "../context/socketContext";
 
 export function DayPhase({ onVote, onSendMessage }: DayPhaseProps) {
   const [message, setMessage] = useState("");
-  const { chatMessages, players, currentPlayer } = useSocketContext();
+  const { chatMessages, players, currentPlayer, dayCount } = useSocketContext();
+  const [isVoted, setIsVoted] = useState(false);
 
   const sendMessage = () => {
     if (message.trim() && currentPlayer) {
@@ -13,6 +14,17 @@ export function DayPhase({ onVote, onSendMessage }: DayPhaseProps) {
       setMessage("");
     }
   };
+
+  const handleOnVote = (playerId: string, playerName: string) => {
+    setIsVoted(true);
+    onVote(playerId, playerName);
+  };
+
+  useEffect(() => {
+    if (isVoted) {
+      setIsVoted(false);
+    }
+  }, [dayCount]);
 
   return (
     <div className="bg-gray-800 rounded-lg p-6">
@@ -67,8 +79,9 @@ export function DayPhase({ onVote, onSendMessage }: DayPhaseProps) {
                   <div key={player.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-600 rounded">
                     <span>{player.name}</span>
                     <button
-                      onClick={() => onVote(player.id, player.name)}
+                      onClick={() => handleOnVote(player.id, player.name)}
                       className="px-3 py-1 rounded bg-gray-500 hover:bg-gray-400"
+                      disabled={isVoted}
                     >
                       Vote
                     </button>
@@ -77,6 +90,22 @@ export function DayPhase({ onVote, onSendMessage }: DayPhaseProps) {
             ) : (
               <div className="text-center text-gray-400 py-4">You cannot vote while dead</div>
             )}
+          </div>
+        </div>
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Players</h3>
+          <div className="bg-gray-700 rounded p-3">
+            {players.map((player) => (
+              <div
+                key={player.id}
+                className="flex items-center justify-between py-2 border-b border-gray-600 last:border-0"
+              >
+                <div className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full mr-2 ${player.isAlive ? "bg-green-400" : "bg-red-400"}`}></div>
+                  <span>{player.name}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
