@@ -95,7 +95,7 @@ export function NightPhase({ onAction }: NightPhaseProps) {
 
   const canPerformAction = () => {
     if (!currentPlayer) return false;
-
+    if (!currentPlayer.player.isAlive) return false;
     const role = currentPlayer.player.role;
     return role === Role.DEMON || role === Role.DEMON_LEADER || role === Role.DOCTOR || role === Role.INSPECTOR;
   };
@@ -112,6 +112,11 @@ export function NightPhase({ onAction }: NightPhaseProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-4 text-blue-400">Night Phase - Special Actions</h2>
+      <h2 className="text-lg mb-4">
+        {currentPlayer?.player.isAlive
+          ? "You are alive. Discuss and vote to eliminate a suspect."
+          : "You are dead. You can watch the discussion but cannot participate."}
+      </h2>
 
       {renderRoleInstructions()}
 
@@ -158,7 +163,7 @@ export function NightPhase({ onAction }: NightPhaseProps) {
             disabled={!selectedPlayer}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 text-white font-bold py-2 px-4 rounded"
           >
-            {currentPlayer.player.role === "inspector" ? "Investigate" : "Confirm Selection"}
+            {currentPlayer.player.role === Role.INSPECTOR ? "Investigate" : "Confirm Selection"}
           </button>
         </div>
       )}
@@ -167,7 +172,7 @@ export function NightPhase({ onAction }: NightPhaseProps) {
         <div className="bg-gray-700 p-4 rounded-lg mb-4">
           <h4 className="text-lg font-semibold mb-2 text-green-400">Action Completed</h4>
           <p className="text-sm">
-            {currentPlayer.player.role === "inspector"
+            {currentPlayer.player.role === Role.INSPECTOR
               ? "You have completed your investigation."
               : "Your selection has been recorded. Waiting for other players..."}
           </p>
@@ -185,8 +190,17 @@ export function NightPhase({ onAction }: NightPhaseProps) {
 
       {!canPerformAction() && (
         <div className="bg-gray-700 p-4 rounded-lg">
-          <h4 className="text-lg font-semibold mb-2">Waiting</h4>
-          <p className="text-sm">You don't have any night actions. Wait for the night to end.</p>
+          {currentPlayer?.player.isAlive ? (
+            <>
+              <h4 className="text-lg font-semibold mb-2">Waiting</h4>
+              <p className="text-sm">You don't have any night actions. Wait for the night to end.</p>
+            </>
+          ) : (
+            <>
+              <h4 className="text-lg font-semibold mb-2">Ghosting....</h4>
+              <p className="text-sm">You have been killed by demons.... Now you are a ghost...</p>
+            </>
+          )}
         </div>
       )}
 

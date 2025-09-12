@@ -15,7 +15,11 @@ export function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayP
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-4 text-yellow-400">Day Phase - Discussion</h2>
-
+      <h2 className="text-lg mb-4">
+        {currentPlayer?.player.isAlive
+          ? "You are alive. Discuss and vote to eliminate a suspect."
+          : "You are dead. You can watch the discussion but cannot participate."}
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <h3 className="text-lg font-semibold mb-2">Chat</h3>
