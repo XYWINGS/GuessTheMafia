@@ -26,16 +26,12 @@ export enum Role {
   INSPECTOR = "inspector",
 }
 
-// SessionBrowser Component
 export interface Session {
   sessionId: string;
   playerCount: number;
   hostName: string;
 }
-// NightPhase Component
 export interface NightPhaseProps {
-  players: Player[];
-  currentPlayer: CurrentPlayerState | null;
   onAction: (targetId: string, actionType: string) => void;
 }
 
@@ -44,26 +40,35 @@ export interface SessionBrowserProps {
   onCreateSession: (playerName: string) => void;
 }
 
-// GameLobby Component
 export interface GameLobbyProps {
   players: Player[];
   onStartGame: () => void;
   currentPlayer: Player;
 }
+
 export type CurrentPlayerState = {
   sessionId: string;
   player: Player;
 };
+
 export type GamePhaseState = {
   phase: GamePhase;
   duration: number;
 };
-// DayPhase Component
+
 export interface DayPhaseProps {
-  players: Player[];
-  currentPlayer: CurrentPlayerState | null;
   onVote: (targetId: string, targetName: string) => void;
   onSendMessage: (message: string) => void;
+}
+
+export interface GamePageProps {
+  createSession: (targetId: string, targetName: string) => void;
+  onSendMessage: (message: string) => void;
+  onJoinSession: (sessionId: string, playerName: string) => void;
+  onCreateSession: (playerName: string) => void;
+  onStartGame: () => void;
+  onVote: (targetId: string, targetName: string) => void;
+  onAction: (targetId: string, actionType: string) => void;
 }
 
 export interface Player {

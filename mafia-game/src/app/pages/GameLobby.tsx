@@ -1,9 +1,10 @@
 "use client";
-import { useSocket } from "../page";
+
 import { GameLobbyProps } from "../configs/configs";
+import { useSocketContext } from "../context/socketContext";
 
 export function GameLobby({ players, onStartGame }: GameLobbyProps) {
-  const { currentPlayer } = useSocket();
+  const { currentPlayer } = useSocketContext();
   return (
     <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-center">Game Lobby</h2>

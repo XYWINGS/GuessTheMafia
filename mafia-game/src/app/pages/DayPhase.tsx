@@ -1,10 +1,12 @@
+"use client";
 import { useState } from "react";
 import { DayPhaseProps } from "../configs/configs";
-import { useSocket } from "../page";
+import { useSocketContext } from "../context/socketContext";
 
-export function DayPhase({ players, currentPlayer, onVote, onSendMessage }: DayPhaseProps) {
+export function DayPhase({ onVote, onSendMessage }: DayPhaseProps) {
   const [message, setMessage] = useState("");
-  const { chatMessages } = useSocket();
+  const { chatMessages, players, currentPlayer } = useSocketContext();
+
   const sendMessage = () => {
     if (message.trim() && currentPlayer) {
       onSendMessage(message);

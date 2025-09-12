@@ -1,12 +1,13 @@
 "use client";
+
 import { useState, useEffect } from "react";
+import { useSocketContext } from "../context/socketContext";
 import { NightPhaseProps, GamePhase, Role } from "../configs/configs";
-import { useSocket } from "../page";
 
 export function NightPhase({ onAction }: NightPhaseProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [actionCompleted, setActionCompleted] = useState(false);
-  const { players, currentPlayer, gamePhase, investigationResult, setInvestigationResult } = useSocket();
+  const { players, currentPlayer, gamePhase, investigationResult, setInvestigationResult } = useSocketContext();
 
   useEffect(() => {
     if (gamePhase?.phase === GamePhase.DAY) {

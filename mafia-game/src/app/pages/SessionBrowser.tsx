@@ -1,10 +1,11 @@
 "use client";
-import { useSocket } from "../page";
+
 import { useEffect, useState } from "react";
+import { useSocketContext } from "../context/socketContext";
 import { Session, SessionBrowserProps } from "../configs/configs";
 
 export function SessionBrowser({ onJoinSession, onCreateSession }: SessionBrowserProps) {
-  const { socket, isConnected, sessions } = useSocket();
+  const { socket, isConnected, sessions } = useSocketContext();
   const [localSessions, setSessions] = useState(sessions);
   const [playerName, setPlayerName] = useState("kanna");
   const [selectedSession, setSelectedSession] = useState<string>("");
