@@ -1,17 +1,49 @@
-FROM node:20.17
+# -------------------------
+# 1. Builder stage
+# -------------------------
+FROM node:20.17-slim AS builder
+
+# Set working dir
 WORKDIR /app
+
+# Install dependencies first (layer caching)
 COPY package.json package-lock.json* ./
-RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
-RUN npm install -g npm@11.6.0
-RUN npm cache clean --force && \
-    npm install -g npm@latest && \
-    npm install
+RUN npm ci
+
+# Copy source
 COPY . .
+
+# Disable telemetry
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Build Next.js
 RUN npm run build
-ENV NODE_ENV production
+
+# -------------------------
+# 2. Runtime stage
+# -------------------------
+FROM node:20.17-slim AS runner
+
+# Set working dir
+WORKDIR /app
+
+# Copy only necessary files from builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+
+# Environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=8080
+
+# Non-root user
 USER 10014
+
 EXPOSE 8080
-ENV HOSTNAME 0.0.0.0
-ENV PORT 8080
-CMD ["./node_modules/.bin/next", "start"]
+
+# Start Next.js
+CMD ["node_modules/.bin/next", "start"]
