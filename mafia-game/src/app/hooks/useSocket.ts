@@ -27,6 +27,8 @@ export function useSocket() {
 
   useEffect(() => {
     const newSocket = io(BASE_URL, {
+      path: "/default/guess-the-demons-backend/v1.0/socket.io/",
+      transports: ["websocket", "polling"],
       autoConnect: true,
       reconnection: true,
     });
