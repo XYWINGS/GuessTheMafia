@@ -26,7 +26,7 @@ export function useSocket() {
   const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
 
   useEffect(() => {
-    const newSocket = io(BASE_URL, {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001", {
       transports: ["websocket", "polling"],
       autoConnect: true,
       reconnection: true,
