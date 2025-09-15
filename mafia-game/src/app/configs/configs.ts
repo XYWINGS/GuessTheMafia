@@ -1,6 +1,6 @@
 import { Socket } from "socket.io-client";
 
-export const BASE_URL = "http://localhost:5000";
+export const BASE_URL = "https://6aa04787-55b3-45c0-aa4c-4b38c6aa347f-dev.e1-us-east-azure.choreoapis.dev/default/guess-the-demons-backend/v1.0/";
 
 export type KilledBy = "demons" | "vampire" | "villagers" | null;
 

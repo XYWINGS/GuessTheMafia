@@ -1,5 +1,14 @@
 "use client";
-import { Role, Player, Session, GameState, GamePhase, GamePhaseState, CurrentPlayerState } from "../configs/configs";
+import {
+  Role,
+  Player,
+  Session,
+  GameState,
+  GamePhase,
+  GamePhaseState,
+  CurrentPlayerState,
+  BASE_URL,
+} from "../configs/configs";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -17,7 +26,7 @@ export function useSocket() {
   const [gamePhase, setGamePhase] = useState<GamePhaseState>({ phase: GamePhase.DAY, duration: 0 });
 
   useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001", {
+    const newSocket = io(BASE_URL, {
       autoConnect: true,
       reconnection: true,
     });
